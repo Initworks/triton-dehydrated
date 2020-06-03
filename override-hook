@@ -1,0 +1,18 @@
+function verifyvm {
+        local domain="${1}" vmuuid="${2}"
+        local cname="$(dig +short cname "${domain}" @${NAMESERVER:-8.8.8.8})"
+        if [ "a$cname" != "a" ]; then
+                local acmecname="$(dig +short cname "_acme-challenge.${domain}" @${NAMESERVER:-8.8.8.8})"
+                if [ "a$acmecname" == "a" ]; then
+                        echo "ERROR: ${domain} is a CNAME to ${cname}, but _acme-challenge.${domain} is not a CNAME" >&2
+                        exit 1
+                fi
+        fi
+
+}
+
+function get_zonename {
+    local cmd="/usr/sbin/mdata-get sdc:uuid"
+    $cmd
+}
+
