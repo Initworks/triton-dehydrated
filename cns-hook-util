@@ -283,11 +283,18 @@ function deploy_cert {
         ;;
     adminui)
         vmuuid="$(vmadm lookup alias=adminui0)"
-        cat "${keyfile}" "${fullchainfile}" > "${certdir}/combined.pem"
-        cp "${certdir}/combined.pem" "/zones/${vmuuid}/root/opt/smartdc/adminui/etc/ssl/default.pem"
-        rm /zones/"${vmuuid}"/root/opt/smartdc/adminui/etc/ssl/ADMINUI.*
-        zlogin "${vmuuid}" svcadm restart adminui
-        echo "OK: adminui certificate deployed, and adminui restarted" >&2
+
+        local adminui_svc
+        local CERT=$(cat ${fullchainfile})
+        CERT="${CERT//$'\n'/\\n}"
+        local KEY=$(cat ${keyfile})
+        KEY="${KEY//$'\n'/\\n}"
+        adminui_svc=$(sdc-sapi /services?name=adminui | json -H 0.uuid)
+        sdc-sapi /services/$adminui_svc -d "{\"action\": \"update\", \"metadata\": {\"ssl_certificate\": \"${CERT}\", \"ssl_key\": \"${KEY}\"}}" -X PUT
+
+        zlogin "${vmuuid}" svcadm restart config-agent
+
+        echo "OK: adminui certificate deployed to sapi, and config-agent in adminui0 restarted" >&2
         ;;
     docker)
         sdcadm experimental install-docker-cert \
